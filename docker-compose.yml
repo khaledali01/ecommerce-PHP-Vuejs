@@ -1,0 +1,57 @@
+version: "3.7"
+
+services:
+  shop-db:
+    image: mysql:8.0
+    container_name: shop-db
+    restart: unless-stopped
+    env_file:
+      - ./.env.mysql
+    volumes:
+      - ./mysql:/docker-entrypoint-initdb.d
+    networks:
+      - shop
+  
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: phpmyadmin
+    links:
+      - shop-db
+    env_file:
+      - ./.env.phpmyadmin
+    restart: always
+    ports:
+      - 8001:80
+    networks:
+      - shop
+
+  shop:
+    build:
+      context: ./shop/
+      dockerfile: Dockerfile
+    container_name: shop-app
+    links:
+      - shop-db
+    restart: unless-stopped
+    env_file:
+      - ./shop/.env.prod
+    ports:
+      - "8000:80"
+    networks:
+      - shop
+
+  dashboard:
+    container_name: dashboard
+    build:
+      context: ./dashboard/
+      dockerfile: Dockerfile
+    tty: true
+    stdin_open: true
+    ports:
+      - "8002:80"
+    networks:
+      - shop
+
+networks:
+  shop:
+    driver: bridge
